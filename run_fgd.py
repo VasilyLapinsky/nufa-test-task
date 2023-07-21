@@ -42,8 +42,8 @@ def main(content_image_path, style_image_path, result_image_path):
         image=content_image,
         image_embeds=out.image_embeds,
         negative_image_embeds=out.negative_image_embeds,
-        height=768,
-        width=768,
+        height=512,
+        width=512,
         num_inference_steps=100,
         guidance_scale=15,
         strength=.5

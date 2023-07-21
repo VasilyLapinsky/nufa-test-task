@@ -12,8 +12,8 @@ from diffusers.pipelines.kandinsky2_2.pipeline_kandinsky2_2_img2img import (
 )
 
 
-def filter_latents(latents, 
-                   filter_shape=(11, 11),
+def filter_latents(latents,
+                   filter_shape=(63, 63),
                    sigma_color=0.1,
                    sigma_space=(3, 3)
                    ):
@@ -34,8 +34,8 @@ class KandinskyV22Img2ImgPipelineFGD(KandinskyV22Img2ImgPipeline):
         height: int = 512,
         width: int = 512,
         num_inference_steps: int = 100,
-        min_fgd_steps: int = 10,
-        delta = .2,
+        num_fgd_steps: int = 10,
+        delta = 1.,
         guidance_scale: float = 4.0,
         strength: float = 0.3,
         num_images_per_prompt: int = 1,
@@ -118,6 +118,9 @@ class KandinskyV22Img2ImgPipelineFGD(KandinskyV22Img2ImgPipeline):
 
         latents = self.movq.encode(image)["latents"]
         latents = latents.repeat_interleave(num_images_per_prompt, dim=0)
+        print(latents.shape)
+        latents_filtered = filter_latents(latents)
+
         self.scheduler.set_timesteps(num_inference_steps, device=device)
         timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, strength, device)
         latent_timestep = timesteps[:1].repeat(batch_size * num_images_per_prompt)
@@ -125,8 +128,7 @@ class KandinskyV22Img2ImgPipelineFGD(KandinskyV22Img2ImgPipeline):
         latents = self.prepare_latents(
             latents, latent_timestep, batch_size, num_images_per_prompt, image_embeds.dtype, device, generator
         )
-
-        latents_filtered = filter_latents(latents)
+        
         for i, t in enumerate(self.progress_bar(timesteps)):
             # expand the latents if we are doing classifier free guidance
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
@@ -153,7 +155,7 @@ class KandinskyV22Img2ImgPipelineFGD(KandinskyV22Img2ImgPipeline):
             ):
                 noise_pred, _ = noise_pred.split(latents.shape[1], dim=1)
 
-            if i < min_fgd_steps:
+            if i < num_fgd_steps:
                 guidance_filtered = latents_filtered
                 sample_filtered = filter_latents(latents)
             else:

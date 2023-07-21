@@ -1,0 +1,1 @@
+python3 run.py --content_image_path "$1" --style_image_path "$2" 
